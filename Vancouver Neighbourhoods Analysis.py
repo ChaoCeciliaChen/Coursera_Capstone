@@ -4,7 +4,59 @@
 # # City of Vancouver
 #     
 
+# # 1. Prepare data file of the city of Vancouver
+
+# In[1]:
+
+
+#Import all necessary libraries.
+#use the inline backend to generate the plots within the browser
+get_ipython().magic(u'matplotlib inline')
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+mpl.style.use('ggplot') # optional: for ggplot-like style
+import pylab as pl
+
+from sklearn.decomposition import PCA
+
+# check for latest version of Matplotlib
+print ('Matplotlib version: ', mpl.__version__) # >= 2.0.0
+
+
 # In[4]:
+
+
+import numpy as np
+import pandas as pd
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+
+import json # library to handle JSON files
+
+#!conda install -c conda-forge geopy --yes # uncomment this line if you haven't completed the Foursquare API lab
+from geopy.geocoders import Nominatim # convert an address into latitude and longitude values
+
+import requests # library to handle requests
+from pandas.io.json import json_normalize # tranform JSON file into a pandas dataframe
+
+# Matplotlib and associated plotting modules
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+
+# import k-means from clustering stage
+from sklearn.cluster import KMeans
+
+get_ipython().system(u'conda install -c conda-forge folium=0.5.0 --yes ')
+import folium # map rendering library
+
+from pprint import pprint
+
+print('Libraries imported.')
+
+
+# In[7]:
 
 
 #import police department incident report from 2013-1-1 to 2018-12-31
@@ -34,9 +86,10 @@ crime.reset_index(drop=True)
 crime.head(5)
 
 
-# In[5]:
+# In[8]:
 
 
+#confirm the date range of crime data
 datetime_list = []
 for i in range(len(crime)):
     datetime_list.append([crime.YEAR[i],crime.MONTH[i],crime.DAY[i]])
@@ -47,25 +100,42 @@ print("The data range of crime record of Greater Vancouver is from {} to {}."
 datetime_list[:10]
 
 
-# In[7]:
+# In[9]:
 
 
+#group by neighbourhood and years to get total reported crime number of each year.
 crime_num_year = crime.groupby(['NEIGHBOURHOOD','YEAR']).count()
 crime_num_year
 
 
-# In[8]:
+# In[10]:
 
 
+#get average crime number of each neighbourhood
 crime_ave_year = pd.DataFrame(crime_num_year.groupby(['NEIGHBOURHOOD'])['TYPE'].mean())
 crime_ave_year = crime_ave_year.reset_index(col_level=1)
 crime_ave_year = crime_ave_year.rename(columns={'NEIGHBOURHOOD':'neighbourhood','TYPE':'crime_avg'})
 crime_ave_year
 
 
+# In[11]:
+
+
+#display average crime number of each year of each neighbourhood.
+crime_ave_year = crime_ave_year.sort_values('crime_avg', ascending=False).reset_index(drop=True)
+crime_ave_year.plot(kind='bar', figsize=(20, 10), x='neighbourhood', rot=80)
+
+plt.xlabel('Neighbourhood') # add to x-label to the plot
+plt.ylabel('Average Number of Crime') # add y-label to the plot
+plt.title('Number of Crime of each neighbourhood in Greater Vancouver 2003-2018') # add title to the plot
+plt.legend(['Average Number of Crime'])
+
+plt.show()
+
+
 # Manually find coordinates by using <a href="https://www.latlong.net/convert-address-to-lat-long.html">LatLong.net</a>
 
-# In[9]:
+# In[12]:
 
 
 van_nhood = pd.DataFrame(crime_ave_year, columns=['neighbourhood']) 
@@ -82,7 +152,7 @@ van_nhood = van_nhood.sort_values(by=['neighbourhood']).reset_index(drop=True)
 van_nhood
 
 
-# In[10]:
+# In[13]:
 
 
 #combine crime_ave_year and van_nhood
@@ -94,37 +164,10 @@ print(crime_nhood_merged.dtypes)
 crime_nhood_merged
 
 
-# In[11]:
+# In[14]:
 
 
-import numpy as np
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-
-import json # library to handle JSON files
-
-#!conda install -c conda-forge geopy --yes # uncomment this line if you haven't completed the Foursquare API lab
-from geopy.geocoders import Nominatim # convert an address into latitude and longitude values
-
-import requests # library to handle requests
-from pandas.io.json import json_normalize # tranform JSON file into a pandas dataframe
-
-# Matplotlib and associated plotting modules
-import matplotlib.cm as cm
-import matplotlib.colors as colors
-
-# import k-means from clustering stage
-from sklearn.cluster import KMeans
-
-get_ipython().system(u'conda install -c conda-forge folium=0.5.0 --yes ')
-import folium # map rendering library
-
-print('Libraries imported.')
-
-
-# In[12]:
-
-
+#map of metro Vancouver
 address = 'Metro Vancouver, BC'
 
 geolocator = Nominatim(user_agent="on_explorer")
@@ -134,7 +177,7 @@ longitude = location.longitude
 print('The geograpical coordinate of Metro Vancouver are {}, {}.'.format(latitude, longitude))
 
 
-# In[13]:
+# In[15]:
 
 
 # create map of Metro Vancouver using latitude and longitude values
@@ -142,7 +185,7 @@ map_vancouver = folium.Map(location=[latitude, longitude], zoom_start=10)
 map_vancouver
 
 
-# In[14]:
+# In[16]:
 
 
 # create map of Greater Vancouver using latitude and longitude values
@@ -168,11 +211,12 @@ for lat, lng, neighborhood in zip(crime_nhood_merged['latitude'],
 map_vancouver
 
 
-# In[20]:
+# In[17]:
 
 
-CLIENT_ID = '4FA0LNQQGEFVCVPVTWBWPVHRNEFVCXLVRJA0VJM0EQNVYBB5' 
-CLIENT_SECRET = 'BWI0ZXE4AITMQTUW514GZTTMLETWFPEOONU2U4INHGWYN4CF' 
+#Foursquare API account info
+CLIENT_ID = 'SASB2OVN32ZTFVGRD2NJZMZMYX0VJ2LJMYQMCXN5KUGWE4NL' 
+CLIENT_SECRET = 'F3B0FLTJ31BFJ5112YBBWSUZFUQVFI15YMXSJK1O5VILFDBY' 
 VERSION = '20190507' # Foursquare API version
 
 print('Your credentails:')
@@ -180,7 +224,7 @@ print('CLIENT_ID: ' + CLIENT_ID)
 print('CLIENT_SECRET:' + CLIENT_SECRET)
 
 
-# In[21]:
+# In[18]:
 
 
 # get the coordinates of each neighbourhood
@@ -197,7 +241,7 @@ for i in range(len(crime_nhood_merged)):
                                                                neighbourhood_longitude[i]))
 
 
-# In[22]:
+# In[19]:
 
 
 #Here is to get the top 100 venues that are in The Beaches within a radius of 500 meters.
@@ -216,7 +260,25 @@ for i in range(len(crime_nhood_merged)):
 url
 
 
-# In[18]:
+# In[20]:
+
+
+#store venue info(dataframe) of each neighbourhood into a list.
+filtered_columns = ['venue.name', 'venue.categories', 'venue.location.lat', 'venue.location.lng']
+nearby_venues = []
+
+for i in range(len(crime_nhood_merged)):
+    results = requests.get(url[i]).json()
+   #print(results)
+    venues = results['response']['groups'][0]['items']
+    if len(venues) != 0:
+        nearby_venues_temp = json_normalize(venues)
+    nearby_venues_temp = nearby_venues_temp.filter(filtered_columns, axis=1)
+    nearby_venues.append(nearby_venues_temp)
+print(len(nearby_venues))#ensure the size of nearby_venues which is 24(neighouthoods)
+
+
+# In[21]:
 
 
 # function that extracts the category of the venue
@@ -233,204 +295,214 @@ def get_category_type(row):
     
 
 
-# In[19]:
+# In[22]:
 
 
-from pprint import pprint
-filtered_columns = ['venue.name', 'venue.categories', 'venue.location.lat', 'venue.location.lng']
-nearby_venues = []
-for i in range(2):
-    results = requests.get(url[i]).json()
-    print(results)
-    venues = results['response']['groups'][0]['items']
-    if len(venues) != 0:
-        nearby_venues_temp = json_normalize(venues)
+#get category name of each venue and rename the colums' name
+for i in range(len(nearby_venues)):
+    nearby_venues[i].iloc[:,1] = nearby_venues[i].apply(get_category_type, axis=1)
+    nearby_venues[i].columns = [col.split(".")[-1] for col in nearby_venues[i].columns]
+    print(nearby_venues[i].head(2))#ensure the format of each dataframe(venue info)
+
+
+# In[23]:
+
+
+#add name of neighourhood to each venue info dataframe
+for i in range(len(nearby_venues)):
+    nearby_venues[i]['neighbourhood'] = crime_nhood_merged.loc[i, 'neighbourhood']
+    print(nearby_venues[i].head(2))
+
+
+# # Explore Venues of Each Neighbourhood
+
+# In[24]:
+
+
+#count number of venue of each neighbourhood
+for i in range(len(nearby_venues)):
+    nearby_venues[i]["venue_num"] = len(nearby_venues[i])
+
+
+# In[25]:
+
+
+#concatenate venues of each neighbourhood into a new dataframe
+df_nearby_venues = pd.concat(nearby_venues).reset_index(drop=True)
+print(df_nearby_venues.shape)#for later checking reference
+df_nearby_venues.head()
+
+
+# In[26]:
+
+
+#prepare a new dataframe that includes neighourhood and number of venue for generating bar plot chart.
+df_nei_ven = []
+df_nei_ven.append(df_nearby_venues['neighbourhood'].unique())
+df_nei_ven.append(df_nearby_venues['venue_num'].unique())
+df_nei_ven = pd.DataFrame(df_nei_ven)
+df_nei_ven = df_nei_ven.T.sort_values(1, ascending=False).reset_index(drop=True)
+df_nei_ven.rename(columns={0:'neighbourhood', 1:'num_venues'}, inplace=True)
+df_nei_ven
+
+
+# In[27]:
+
+
+#bar plot chart of number of venues of each neighbourhood in Vancouver. There are no venue info collected from Fourquare API of the last five neighbourhood.
+df_nei_ven.plot(kind='bar', figsize=(20, 10), x='neighbourhood', rot=80)
+
+plt.xlabel('Neighbourhood') # add to x-label to the plot
+plt.ylabel('Number of Venue') # add y-label to the plot
+plt.title('Number of Venues of each neighbourhood in Greater Vancouver') # add title to the plot
+plt.legend(['Number of Venue'])
+
+plt.show()
+
+
+# In[29]:
+
+
+# one hot encoding
+vancouver_onehot = pd.get_dummies(df_nearby_venues[['categories']], prefix="", prefix_sep="")
+
+# add neighborhood column back to dataframe
+vancouver_onehot['neighbourhood'] = df_nearby_venues['neighbourhood'] 
+
+# move neighborhood column to the first column
+fixed_columns = [vancouver_onehot.columns[-1]] + list(vancouver_onehot.columns[:-1])
+vancouver_onehot = vancouver_onehot[fixed_columns]
+
+print(vancouver_onehot.shape)#ensure the size not change
+vancouver_onehot.head()
+
+
+# In[30]:
+
+
+#group rows by neighborhood and by taking the mean of the frequency of occurrence of each category
+vancouver_grouped = vancouver_onehot.groupby('neighbourhood').mean().reset_index()
+print(vancouver_grouped.shape)
+vancouver_grouped
+
+
+# In[31]:
+
+
+#print each neighborhood along with the top 10 most common venues
+num_top_venues = 10
+
+for hood in vancouver_grouped['neighbourhood']:
+    print("----"+hood+"----")
+    temp = vancouver_grouped[vancouver_grouped['neighbourhood'] == hood].T.reset_index()
+    temp.columns = ['venue','freq']
+    temp = temp.iloc[1:]
+    temp['freq'] = temp['freq'].astype(float)
+    temp = temp.round({'freq': 2})
+    print(temp.sort_values('freq', ascending=False).reset_index(drop=True).head(num_top_venues))
+    print('\n')
+
+
+# In[32]:
+
+
+#define a function to sort the venues in descending order
+def return_most_common_venues(row, num_top_venues):
+    row_categories = row.iloc[1:]
+    row_categories_sorted = row_categories.sort_values(ascending=False)
     
-    nearby_venues_temp = nearby_venues_temp.filter(filtered_columns, axis=1)
-    nearby_venues_temp['venue.categories'] = pd.Series(nearby_venues_temp.apply(get_category_type, axis=1))
-    #print(nearby_venues_temp)
-          
-    #nearby_venues.append(nearby_venues_temp)
+    return row_categories_sorted.index.values[0:num_top_venues]
 
-#nearby_venues
 
+# In[33]:
 
-# In[187]:
 
+#create the new dataframe and display the top 10 venues for each neighborhood
+num_top_venues = 10
 
-nearby_venues = pd.DataFrame(list(map(list, zip(lst1,lst2,lst3))))
-nearby_venues
+indicators = ['st', 'nd', 'rd']
 
+# create columns according to number of top venues
+columns = ['neighbourhood']
+for ind in np.arange(num_top_venues):
+    try:
+        columns.append('{}{} Most Common Venue'.format(ind+1, indicators[ind]))
+    except:
+        columns.append('{}th Most Common Venue'.format(ind+1))
 
-# In[ ]:
+# create a new dataframe
+neighborhoods_venues_sorted = pd.DataFrame(columns=columns)
+neighborhoods_venues_sorted['neighbourhood'] = vancouver_grouped['neighbourhood']
 
+for ind in np.arange(vancouver_grouped.shape[0]):
+    neighborhoods_venues_sorted.iloc[ind, 1:] = return_most_common_venues(vancouver_grouped.iloc[ind, :], num_top_venues)
+neighborhoods_venues_sorted.head()
 
-len(ven)
 
+# # Cluster Neighbourhoods
 
-# In[128]:
+# In[34]:
 
 
-nearby_venues
+# set number of clusters
+kclusters = 10
 
+vancouver_grouped_clustering = vancouver_grouped.drop('neighbourhood', 1)
 
-# In[115]:
+# run k-means clustering
+kmeans = KMeans(n_clusters=kclusters, random_state=0).fit(vancouver_grouped_clustering)
 
+# check cluster labels generated for each row in the dataframe
+kmeans.labels_[0:10] 
 
-json_normalize(venues)
 
+# In[35]:
 
-# In[104]:
 
+# add clustering labels
+neighborhoods_venues_sorted.insert(0, 'Cluster Labels', kmeans.labels_)
 
-#nearby_venues = []
-#filtered_columns = ['venue.name', 'venue.categories', 'venue.location.lat', 'venue.location.lng']
+van_nhood_merged = van_nhood
 
-#for i in range(len(nearby_venues)):
-#venues = np.asarray(venues)
-test = json_normalize(venues)# flatten JSON
-    # filter columns
-    #nearby_venues.append(nearby_venues[i].loc[:, filtered_columns])
+# merge toronto_grouped with toronto_data to add latitude/longitude for each neighborhood
+van_nhood_merged = van_nhood_merged.join(neighborhoods_venues_sorted.set_index('neighbourhood'), on='neighbourhood')
 
-    # filter the category for each row
-    #nearby_venues['venue.categories'].append(nearby_venues[i].apply(get_category_type, axis=1))
+van_nhood_merged.head() # check the last columns!
 
-    # clean columns
-    #nearby_venues.columns.append([col.split(".")[-1] for col in nearby_venues.columns])
-    
-nearby_venues.head()
 
+# In[36]:
 
-# In[9]:
 
+#prepare data for bar plot
+van_nhood_merged['latitude'] = pd.to_numeric(van_nhood_merged['latitude'])
+van_nhood_merged['longitude'] = pd.to_numeric(van_nhood_merged['longitude'])
+van_nhood_merged.dtypes
 
-#drop nan
 
-#crime_ave_year.neighbourhood = [x for x in crime_ave_year.neighbourhood if type(x) is not float]
-#crime_ave_year.neighbourhood = np.asarray(crime_ave_year.neighbourhood, dtype=object)
-#print("length of neighbourhood array: ",len(crime_ave_year.neighbourhood))
-#crime_ave_year.neighbourhood
+# In[37]:
 
 
-# In[216]:
+# create map
+map_clusters = folium.Map(location=[latitude, longitude], zoom_start=12)
 
+# set color scheme for the clusters
+x = np.arange(kclusters)
+ys = [i + x + (i*x)**2 for i in range(kclusters)]
+colors_array = cm.rainbow(np.linspace(0, 1, len(ys)))
+rainbow = [colors.rgb2hex(i) for i in colors_array]
 
-#nhood = []
-#for n in range(0, len(neighbourhood)):
- #   l = len(neighbourhood[n].split('-'))
-  #  if l == 1:
-   #     nhood.append(neighbourhood[n])
-   # elif l > 1:
-    #    temp = neighbourhood[n].split('-')
-     #   for i in range(0,len(temp)):
-      #      nhood.append(temp[i])
-            
-#nhood = np.asarray(nhood, dtype=object)            
-#print("length of neighbourhood array: ",len(nhood))
-#nhood
-
-
-# In[131]:
-
-
-#Install geocoder package
-get_ipython().system(u'conda install -c conda-forge geocoder')
-
-
-# In[147]:
-
-
-#!anaconda install -c conda-forge OpenCageGeocode
-get_ipython().system(u'conda install -c conda-forge git')
-
-
-# In[164]:
-
-
-get_ipython().system(u'git clone https://github.com/OpenCageData/python-opencage-geocoder.git')
-
-
-# In[173]:
-
-
-get_ipython().system(u'python setup.py install')
-
-
-# In[182]:
-
-
-from opencage.geocoder import OpenCageGeocode
-from pprint import pprint
-
-key = 'fc12af447ac84a9faeb6a895ef7a370a'  # get api key from:  https://opencagedata.com
-geocoder = OpenCageGeocode(key)
-query = 'Metro Vancouver, BC'  
-results = geocoder.geocode(query)
-pprint (results)
-
-
-# In[180]:
-
-
-list_lat = []   # create empty lists
-
-list_long = []
-
-for index, row in df_crime_more_cities.iterrows(): # iterate over rows in dataframe
-
-
-    City = row['City']
-    State = row['State']       
-    query = str(City)+','+str(State)
-
-    results = geocoder.geocode(query)   
-    lat = results[0]['geometry']['lat']
-    long = results[0]['geometry']['lng']
-
-    list_lat.append(lat)
-    list_long.append(long)
-
-
-
-
-# In[181]:
-
-
-
-
-
-# In[207]:
-
-
-get_ipython().system(u"wget -q -O 'nyu-2451-35688-geojson.json' https://geo.nyu.edu/download/file/nyu-2451-35688-geojson.json")
-
-
-# In[209]:
-
-
-with open('nyu-2451-35688-geojson.json') as json_data:
-    vancouver_data = json.load(json_data)
-
-
-# In[210]:
-
-
-pprint(vancouver_data)
-
-
-# In[184]:
-
-
-import geocoder # import geocoder
-
-# initialize your variable to None
-lat_lng_coords = None
-
-# loop until you get the coordinates
-while(lat_lng_coords is None):
-  g = geocoder.google('Vancouver, BC')
-  lat_lng_coords = g.latlng
-
-latitude = lat_lng_coords[0]
-longitude = lat_lng_coords[1]
+# add markers to the map
+markers_colors = []
+for lat, lon, poi, cluster in zip(van_nhood_merged['latitude'], van_nhood_merged['longitude'], van_nhood_merged['neighbourhood'], van_nhood_merged['Cluster Labels']):
+    label = folium.Popup(str(poi) + ' Cluster ' + str(cluster), parse_html=True)
+    folium.CircleMarker(
+        [lat, lon],
+        radius=5,
+        popup=label,
+        color=rainbow[cluster-1],
+        fill=True,
+        fill_color=rainbow[cluster-1],
+        fill_opacity=0.7).add_to(map_clusters)
+       
+map_clusters
 
